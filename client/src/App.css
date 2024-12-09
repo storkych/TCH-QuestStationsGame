@@ -36,3 +36,145 @@
     transform: rotate(360deg);
   }
 }
+
+
+@font-face {
+  font-family: 'GOST Type A';
+  src: local('GOST Type A'), url('./assets/fonts/GOST_A.TTF') format('truetype');
+}
+
+.stations-table th {
+
+  font-weight: bold;
+  font-size: larger;
+}
+
+.stations-table-container {
+  margin: 20px;
+}
+
+.stations-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stations-table th,
+.stations-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.stations-table th {
+  cursor: pointer;
+  background-color: #adadad;
+  position: relative;
+}
+
+.stations-table th:hover {
+  background-color: #d26803;
+}
+
+.stations-table tbody tr:nth-child(even) {
+  background-color: #adadad;
+}
+
+.stations-table tbody tr:hover {
+  background-color: #de9e5b;
+}
+
+.clear-sort-button {
+  margin-bottom: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #fd9808;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.clear-sort-button:hover {
+  background-color: #c78000;
+}
+
+.stations-table td, .stations-table th {
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.stations-table .stars {
+  font-size: 1.2rem;
+  color: gold;
+}
+
+
+
+
+/* Общие стили для приложения */
+.app-container {
+  position: relative;
+
+  /*background-color: #f0f0f0; /* Легкий фон, чтобы выделялись изображения */
+  background-image: url('assets/svg/forest01.svg'); /* Замени на свои изображения */
+  background-position: top left, bottom right; /* Позиция фонов */
+  background-size: cover; /* Размер фонов */
+  background-repeat: no-repeat;
+  height: 100vh;
+  color: #ffffff; /* Цвет текста */
+}
+
+/* Стили для таблицы */
+.stations-table-container {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: rgba(0, 0, 0, 0.6); /* Прозрачный фон для таблицы */
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.stations-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #fff;
+}
+
+.stations-table th, .stations-table td {
+  padding: 10px;
+  text-align: left;
+}
+
+.stations-table th {
+  background-color: #333;
+  border-bottom: 2px solid #fff;
+}
+
+.stations-table td {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Контейнер для заголовка и логотипа */
+.header-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+  gap: 15px; /* Расстояние между логотипом и заголовком */
+  margin-top: 50px; /* Отступ сверху */
+
+}
+
+/* Логотип перед заголовком */
+.app-logo {
+  height: 70px;
+}
+
+.app-title {
+  font-family: 'GOST Type A', sans-serif;
+  text-align: center;
+  font-size: 5rem;
+  color: #2a2a2a;
+  text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+  margin-top: 50px;
+}
+

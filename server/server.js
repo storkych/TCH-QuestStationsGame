@@ -67,17 +67,37 @@ app.get('/api/next-station', async (req, res) => {
 });
 
 
-// Оценить станцию
+// Оценить станцию и обновить средний рейтинг
 app.post('/api/rating', async (req, res) => {
     const { participant_id, station_id, rating } = req.body;
+
     try {
-        await pool.query('INSERT INTO ratings (participant_id, station_id, rating) VALUES ($1, $2, $3)', [participant_id, station_id, rating]);
-        res.send('Rating added');
+        // Добавляем новый рейтинг в таблицу ratings
+        await pool.query(
+            'INSERT INTO ratings (participant_id, station_id, rating) VALUES ($1, $2, $3)',
+            [participant_id, station_id, rating]
+        );
+
+        // Пересчитываем средний рейтинг станции
+        const avgResult = await pool.query(
+            'SELECT AVG(rating) as avg_rating FROM ratings WHERE station_id = $1',
+            [station_id]
+        );
+        const avgRating = parseFloat(avgResult.rows[0].avg_rating).toFixed(2);
+
+        // Обновляем колонку rating в таблице stations
+        await pool.query(
+            'UPDATE stations SET rating = $1 WHERE id = $2',
+            [avgRating, station_id]
+        );
+
+        res.send('Rating added and station average updated');
     } catch (error) {
         console.error(error);
-        res.status(500).send('Error adding rating');
+        res.status(500).send('Error adding rating or updating average');
     }
 });
+
 
 
 // Получить всех участников
