@@ -2,10 +2,15 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { Pool } = require('pg');
+const WebSocket = require('ws'); // Подключаем WebSocket
+const multer = require('multer'); // Для загрузки файлов
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const pool = new Pool({
     user: 'postgres',
@@ -15,9 +20,111 @@ const pool = new Pool({
     port: 5432,
 });
 
-// Переменная для хранения ID текущей станции (начнем с первой)
-let currentStationId = 1; // Начнем с первой станции, можно изменить на любую
+// Переменная для хранения ID текущей станции
+let currentStationId = 1;
 
+// Создаём WebSocket-сервер
+const wss = new WebSocket.Server({ noServer: true });
+
+// Храним подключённые клиенты
+const clients = new Set();
+
+// Когда подключается новый клиент
+wss.on('connection', (ws) => {
+    clients.add(ws);
+
+    // Удаляем клиента при отключении
+    ws.on('close', () => {
+        clients.delete(ws);
+    });
+});
+
+// Широковещательная отправка данных всем клиентам
+function broadcast(data) {
+    clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+}
+// Переключить на следующую станцию
+app.get('/api/next-station', async (req, res) => {
+    try {
+        currentStationId++;
+        const result = await pool.query('SELECT * FROM stations WHERE id = $1', [currentStationId]);
+
+        if (result.rows.length === 0) {
+            // Если станция не найдена, возвращаемся к первой
+            currentStationId = 1;
+            const firstStation = await pool.query('SELECT * FROM stations WHERE id = $1', [currentStationId]);
+            broadcast(firstStation.rows[0]);
+            res.json(firstStation.rows[0]);
+        } else {
+            // Отправляем обновление всем клиентам
+            broadcast(result.rows[0]);
+            res.json(result.rows[0]);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error switching to next station');
+    }
+});
+
+// Настройка хранилища для загруженных файлов
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // папка для сохранения файлов
+    },
+    filename: (req, file, cb) => {
+        // Генерация безопасного имени файла
+        const ext = path.extname(file.originalname); // Получаем расширение
+        const baseName = path.basename(file.originalname, ext);
+
+        // Удаляем пробелы и приводим к безопасному формату
+        const safeName = baseName
+            .replace(/[^a-zA-Z0-9]/g, '_') // Заменяем все не буквенно-цифровые символы на "_"
+            .toLowerCase();
+
+        const uniqueSuffix = Date.now(); // Уникальный суффикс
+        cb(null, `${safeName}-${uniqueSuffix}${ext}`); // имя файла: название-дата.расширение
+    },
+});
+
+const upload = multer({ storage });
+
+// Маршрут для создания станции
+app.post('/api/stations', upload.single('image'), async (req, res) => {
+    const { name, description, stage } = req.body;
+    const imagePath = req.file ? req.file.path : null;
+
+    // Создание нового объекта станции
+    const newStation = { name, description, stage, image: imagePath };
+
+    // Используем вашу таблицу stations для сохранения
+    const query = `
+        INSERT INTO stations (name, description, stage, image)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, name, description, stage, image;
+    `;
+    const values = [newStation.name, newStation.description, newStation.stage, newStation.image];
+
+    try {
+        // Выполнение запроса к базе данных
+        const result = await pool.query(query, values);
+
+        // Возвращаем успешный ответ с данными о новой станции
+        res.status(201).send({
+            message: 'Станция создана',
+            station: result.rows[0], // возвращаем данные из результата
+        });
+    } catch (error) {
+        console.error('Error saving station to database:', error);
+        res.status(500).send({
+            message: 'Ошибка при создании станции',
+            error: error.message,
+        });
+    }
+});
 
 
 // Получить все станции
@@ -46,25 +153,7 @@ app.get('/api/current-station', async (req, res) => {
     }
 });
 
-// Получить следующую станцию
-app.get('/api/next-station', async (req, res) => {
-    const { currentStationId } = req.query;  // Извлекаем текущий ID станции из запроса
 
-    try {
-        const result = await pool.query('SELECT * FROM stations WHERE id = $1', [parseInt(currentStationId) + 1]);
-
-        if (result.rows.length > 0) {
-            res.json(result.rows[0]);
-        } else {
-            // Если следующей станции нет, можно вернуть первую станцию
-            const firstStationResult = await pool.query('SELECT * FROM stations LIMIT 1');
-            res.json(firstStationResult.rows[0]);
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error retrieving next station');
-    }
-});
 
 
 // Оценить станцию и обновить средний рейтинг
@@ -128,7 +217,13 @@ app.get('/api/rating/:stationId', async (req, res) => {
 
 
 // Запуск сервера
-const port = 5000;
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+const server = app.listen(5000, () => {
+    console.log('Server running on port 5000');
+});
+
+// Подключаем WebSocket-сервер к HTTP-серверу
+server.on('upgrade', (request, socket, head) => {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+    });
 });

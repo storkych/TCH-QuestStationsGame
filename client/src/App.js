@@ -127,7 +127,6 @@ function App() {
             <div className="app-container">
                 <div className="header-container">
                     <img src={logo} alt='Logo' className="app-logo" />
-                    <h1 className="app-title">ТЧ - Работает</h1>
                 </div>
                 <Routes> {/* Обновляем с Switch на Routes */}
                     <Route path="/" element={<StationsTable stations={stations} />} /> {/* Главная страница с таблицей станций */}

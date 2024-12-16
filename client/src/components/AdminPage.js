@@ -22,7 +22,6 @@ function AdminPage() {
             axios.get(`http://localhost:5000/api/rating/${currentStation.id}`)
                 .then((response) => {
                     setAvgRating(response.data.avg_rating);
-                    console.log('AAAAAAAAA', response.data.avg_rating);
                 })
                 .catch((error) => {
                     console.error('Error fetching average rating', error);
@@ -43,31 +42,32 @@ function AdminPage() {
     // Перейти к следующей станции
     const handleNextStation = () => {
         if (currentStation) {
-            axios.get(`http://localhost:5000/api/next-station?currentStationId=${currentStation.id}`)
+            axios.get(`http://localhost:5000/api/next-station`)
                 .then((response) => {
                     setCurrentStation(response.data);  // Обновляем текущую станцию
                     fetchAverageRating();  // Немедленно обновляем рейтинг при переключении станции
                 })
                 .catch((error) => {
-                    console.error('Error fetching next station', error);
+                    console.error('Error next station', error);
                 });
         }
     };
 
     return (
-        <div>
-            <h2>Admin Page</h2>
+        <div className="container">
+            <h2>Админ панель</h2>
             {currentStation ? (
-                <div>
+                <div className="block">
+                    <img src={`http://localhost:5000/${currentStation.image}`} className="station-image" alt={currentStation.name}></img>
                     <h3>{currentStation.name}</h3>
                     <p>{currentStation.description}</p>
-                    <h4>Average Rating: {avgRating}</h4>
+                    <h4>Средний рейтинг: {avgRating}</h4>
 
                     {/* Кнопка "Следующая станция" */}
-                    <button onClick={handleNextStation}>Next Station</button>
+                    <button onClick={handleNextStation} className="submit-btn">Следующая станция</button>
                 </div>
             ) : (
-                <p>No stations available.</p>
+                <p>Станция не найдена.</p>
             )}
         </div>
     );
