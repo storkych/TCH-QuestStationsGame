@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
-import logo from './assets/svg/logo.svg';  // Импортируем SVG
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'; // Импортируем BrowserRouter, Routes и Route
-import AdminPage from './components/AdminPage'; // Подключаем страницу админа
-import ParticipantPage from './components/ParticipantPage'; // Подключаем страницу участника
+// Импорт SVG.
+import logo from './assets/svg/logo.svg';
+// Импор BrowserRouter, Routes и Route.
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+// Подключение страниц администратора и участника.
+import AdminPage from './components/AdminPage';
+import ParticipantPage from './components/ParticipantPage';
 
-// Компонент для отображения таблицы станций с многоуровневой сортировкой
+// Компонент для отображения таблицы станций с многоуровневой сортировкой.
 function StationsTable({ stations }) {
     const [sortConfig, setSortConfig] = useState([]);
 
-    // Применение сортировки
+    // Применение сортировки.
     const sortedStations = React.useMemo(() => {
         if (sortConfig.length === 0) return stations;
 
@@ -23,36 +26,39 @@ function StationsTable({ stations }) {
         });
     }, [stations, sortConfig]);
 
-    // Обновление состояния сортировки
+    // Обновление состояния сортировки.
     const toggleSort = (key) => {
         setSortConfig((prevSortConfig) => {
             const existing = prevSortConfig.find((item) => item.key === key);
             if (existing) {
-                // Если направление ascending, переключаем на descending
+                // Если направление ascending, при нажатии переключение на descending.
                 if (existing.direction === 'ascending') {
                     return prevSortConfig.map((item) =>
                         item.key === key ? { ...item, direction: 'descending' } : item
                     );
                 }
-                // Удаляем из сортировки, если направление descending
+                // Удаление из сортировки, если направление descending.
                 return prevSortConfig.filter((item) => item.key !== key);
             }
-            // Добавляем новый ключ с ascending
+            // Добавление нового ключа с ascending.
             return [...prevSortConfig, { key, direction: 'ascending' }];
         });
     };
 
-    // Сброс сортировки
+    // Сброс сортировки.
     const clearSort = () => {
         setSortConfig([]);
     };
 
-    // Хелпер для отображения звездочек рейтинга
+    // Хелпер для отображения звездочек рейтинга.
     const renderStars = (rating) => {
-        const stars = Math.round(rating); // Округляем до ближайшего целого
-        return '⭐'.repeat(stars) + '☆'.repeat(5 - stars); // Пять звёзд с заполнением
+        // Округление до ближайшего целого.
+        const stars = Math.round(rating);
+        // Пять звёзд с заполнением в зависимости от значения.
+        return '⭐'.repeat(stars) + '☆'.repeat(5 - stars);
     };
 
+    // Тогглы для сортировки.
     return (
         <div className="stations-table-container">
             <h2>Список всех станций</h2>
@@ -101,7 +107,7 @@ function StationsTable({ stations }) {
     );
 }
 
-// Хелпер для получения направления сортировки
+// Хелпер для получения направления сортировки.
 function getSortDirection(sortConfig, key) {
     const sortItem = sortConfig.find((item) => item.key === key);
     if (!sortItem) return '';
@@ -112,7 +118,7 @@ function App() {
     const [stations, setStations] = useState([]);
 
     useEffect(() => {
-        // Загружаем список станций с сервера
+        // Загрузка списка станций с сервера.
         axios.get('http://localhost:5000/api/stations')
             .then((response) => {
                 setStations(response.data);
