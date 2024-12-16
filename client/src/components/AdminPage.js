@@ -4,6 +4,7 @@ import axios from 'axios';
 function AdminPage() {
     const [currentStation, setCurrentStation] = useState(null);
     const [avgRating, setAvgRating] = useState(0);
+    const [mode, setMode] = useState('creation'); // Режимы: оценивание / создание
 
     // Получить текущую станцию (один раз при монтировании компонента)
     useEffect(() => {
@@ -53,9 +54,30 @@ function AdminPage() {
         }
     };
 
+    const handleGameMode = (newMode) => {
+        setMode(newMode);
+
+        axios.post('http://localhost:5000/api/game-mode', { game_mode: newMode })
+            .then((response) => {
+                console.log('Game mode updated:', response.data);
+            })
+            .catch((error) => {
+                console.error('Error changing game mode:', error);
+            });
+    };
+
     return (
         <div className="container">
             <h2>Админ панель</h2>
+            <div className="mode-switcher">
+                <button className={mode === 'evaluation' ? 'active' : ''} onClick={() => handleGameMode('evaluation')}>
+                    Оценивание
+                </button>
+                <button className={mode === 'creation' ? 'active' : ''} onClick={() => handleGameMode('creation')}>
+                    Создание станции
+                </button>
+            </div>
+
             {currentStation ? (
                 <div className="block">
                     <img src={`http://localhost:5000/${currentStation.image}`} className="station-image" alt={currentStation.name}></img>

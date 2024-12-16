@@ -8,7 +8,7 @@ function ParticipantPage() {
     const [selectedParticipant, setSelectedParticipant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [mode, setMode] = useState('evaluation'); // Режимы: оценивание / создание
+    const [mode, setMode] = useState('creation'); // Режимы: оценивание / создание
 
     // Состояния для создания станции
     const [stationName, setStationName] = useState('');
@@ -17,6 +17,7 @@ function ParticipantPage() {
     const [stationStage, setStationStage] = useState('');
 
     useEffect(() => {
+        // Получение текущей станции и участников
         axios.get('http://localhost:5000/api/current-station')
             .then((response) => setCurrentStation(response.data))
             .catch((error) => setError('Error fetching current station'));
@@ -31,7 +32,14 @@ function ParticipantPage() {
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            setCurrentStation(data); // Обновляем текущую станцию
+
+            if (data.type === 'station_changed') {
+                // Обновляем текущую станцию
+                setCurrentStation(data.data);
+            } else if (data.type === 'gamemode_changed') {
+                // Обновляем режим в зависимости от данных
+                setMode(data.data);
+            }
         };
 
         // Очистка при размонтировании
@@ -172,14 +180,6 @@ function ParticipantPage() {
 
     return (
         <div className="container">
-            <div className="mode-switcher">
-                <button className={mode === 'evaluation' ? 'active' : ''} onClick={() => setMode('evaluation')}>
-                    Оценивание
-                </button>
-                <button className={mode === 'creation' ? 'active' : ''} onClick={() => setMode('creation')}>
-                    Создание станции
-                </button>
-            </div>
             {mode === 'evaluation' ? renderEvaluationMode() : renderCreationMode()}
         </div>
     );

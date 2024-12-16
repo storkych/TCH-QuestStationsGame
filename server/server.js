@@ -40,10 +40,17 @@ wss.on('connection', (ws) => {
 });
 
 // Широковещательная отправка данных всем клиентам
-function broadcast(data) {
-    clients.forEach((client) => {
+// Функция для трансляции сообщения всем клиентам
+function broadcast(type, data) {
+    const message = JSON.stringify({
+        type: type,  // Тип сообщения
+        data: data   // Данные для отправки
+    });
+
+    // Отправляем сообщение всем подключенным клиентам
+    clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(data));
+            client.send(message);
         }
     });
 }
@@ -57,11 +64,11 @@ app.get('/api/next-station', async (req, res) => {
             // Если станция не найдена, возвращаемся к первой
             currentStationId = 1;
             const firstStation = await pool.query('SELECT * FROM stations WHERE id = $1', [currentStationId]);
-            broadcast(firstStation.rows[0]);
+            broadcast('station_changed', firstStation.rows[0]);
             res.json(firstStation.rows[0]);
         } else {
             // Отправляем обновление всем клиентам
-            broadcast(result.rows[0]);
+            broadcast('station_changed', result.rows[0]);
             res.json(result.rows[0]);
         }
     } catch (error) {
@@ -69,6 +76,18 @@ app.get('/api/next-station', async (req, res) => {
         res.status(500).send('Error switching to next station');
     }
 });
+
+app.post('/api/game-mode', async (req, res) => {
+    const { game_mode } = req.body;
+    try {
+        broadcast('gamemode_changed', game_mode); // Отправляем сообщение WebSocket
+        res.status(200).send('Game mode changed');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error switching game mode');
+    }
+});
+
 
 // Настройка хранилища для загруженных файлов
 const storage = multer.diskStorage({
