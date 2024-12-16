@@ -1,19 +1,19 @@
 const { Client } = require('pg');
 
-// Настройка подключения к базе данных
+// Настройка подключения к базе данных.
 const client = new Client({
-    user: 'postgres',           // Имя пользователя
-    host: 'localhost',          // Локальный хост
-    database: 'quest_stations', // Имя базы данных
-    password: '1317',           // Пароль
-    port: 5432,                 // Порт базы данных (по умолчанию 5432)
+    user: 'postgres',
+    host: 'localhost',
+    database: 'quest_stations',
+    password: '1317',
+    port: 5432,
 });
 
 client.connect();
 
 const createStationsTable = async () => {
     try {
-        // Создание таблицы, если её нет
+        // Создание таблицы, если её нет.
         await client.query(`
       CREATE TABLE IF NOT EXISTS stations (
         id SERIAL PRIMARY KEY,
@@ -26,7 +26,7 @@ const createStationsTable = async () => {
     }
 };
 
-// Функция для добавления примерных станций
+// Функция для добавления станций.
 const addExampleStations = async () => {
     const stations = [
         { name: 'Station 1', description: 'Description for Station 1' },
@@ -44,7 +44,7 @@ const addExampleStations = async () => {
     }
 };
 
-// Функция для получения всех станций
+// Функция для получения списка всех станций.
 const getStations = async () => {
     try {
         const res = await client.query('SELECT * FROM stations');
