@@ -3,7 +3,7 @@ import axios from 'axios';
 
 function ParticipantPage() {
     const [currentStation, setCurrentStation] = useState(null);
-    const [rating, setRating] = useState(0);
+    const [rating, setRating] = useState('');
     const [participants, setParticipants] = useState([]);
     const [selectedParticipant, setSelectedParticipant] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -29,14 +29,11 @@ function ParticipantPage() {
 
         // Подключение к WebSocket
         const socket = new WebSocket('ws://localhost:5000');
-
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'station_changed') {
-                // Обновляем текущую станцию
                 setCurrentStation(data.data);
             } else if (data.type === 'gamemode_changed') {
-                // Обновляем режим в зависимости от данных
                 setMode(data.data);
             }
         };
@@ -91,10 +88,12 @@ function ParticipantPage() {
     // Обработчик для изменения оценки
     const handleRatingChange = (e) => {
         const value = e.target.value;
-        // Проверка на допустимые значения
-        if (/^[1-5]$/.test(value) || value === "") {
+        // Проверка на допустимые значения (только от 1 до 5)
+        if (/^[1-5]$/.test(value)) {
             setRating(value);
             setError(null); // Сброс ошибки, если данные корректные
+        } else {
+            setError('Оценка должна быть от 1 до 5');
         }
     };
 
@@ -117,8 +116,7 @@ function ParticipantPage() {
                     <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => setStationImage(e.target.files[0
-                        )}
+                        onChange={(e) => setStationImage(e.target.files[0])}
                         required
                     />
                 </div>
@@ -178,7 +176,7 @@ function ParticipantPage() {
                         />
                     </div>
 
-                    <button onClick={handleRating} className="submit-btn">
+                    <button onClick={handleRating} className="submit-btn" disabled={rating === ''}>
                         Отправить оценку
                     </button>
                 </div>
