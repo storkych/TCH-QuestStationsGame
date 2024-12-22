@@ -32,7 +32,6 @@ function ParticipantPage() {
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-
             if (data.type === 'station_changed') {
                 // Обновляем текущую станцию
                 setCurrentStation(data.data);
@@ -89,6 +88,16 @@ function ParticipantPage() {
         }
     };
 
+    // Обработчик для изменения оценки
+    const handleRatingChange = (e) => {
+        const value = e.target.value;
+        // Проверка на допустимые значения
+        if (/^[1-5]$/.test(value) || value === "") {
+            setRating(value);
+            setError(null); // Сброс ошибки, если данные корректные
+        }
+    };
+
     const renderCreationMode = () => (
         <div className="block">
             <h2>Создание станции</h2>
@@ -108,7 +117,8 @@ function ParticipantPage() {
                     <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => setStationImage(e.target.files[0])}
+                        onChange={(e) => setStationImage(e.target.files[0
+                        )}
                         required
                     />
                 </div>
@@ -141,7 +151,7 @@ function ParticipantPage() {
             {error && <p className="error">{error}</p>}
             {currentStation ? (
                 <div>
-                    <img src={`http://localhost:5000/${currentStation.image}`} className="station-image"></img>
+                    <img src={`http://localhost:5000/${currentStation.image}`} className="station-image" alt="Станция" />
                     <h3>{currentStation.name}</h3>
                     <p>{currentStation.description}</p>
 
@@ -164,7 +174,7 @@ function ParticipantPage() {
                             min="1"
                             max="5"
                             value={rating}
-                            onChange={(e) => setRating(e.target.value)}
+                            onChange={handleRatingChange} // Изменяем функцию на проверку
                         />
                     </div>
 
