@@ -2,46 +2,62 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 function ParticipantPage() {
+    // Хук состояния для хранения текущей станции.
     const [currentStation, setCurrentStation] = useState(null);
-    const [rating, setRating] = useState('');
+    // Хук состояния для хранения выбранной оценки (1-5).
+    const [rating, setRating] = useState(0);
+    // Хук состояния для хранения списка участников.
     const [participants, setParticipants] = useState([]);
+    // Хук состояния для хранения выбранного участника.
     const [selectedParticipant, setSelectedParticipant] = useState(null);
+    // Хук состояния для индикатора загрузки.
     const [loading, setLoading] = useState(true);
+    // Хук состояния для хранения ошибок.
     const [error, setError] = useState(null);
-    const [mode, setMode] = useState('creation'); // Режимы: оценивание / создание
+    // Хук состояния для режима работы (создание или оценка).
+    const [mode, setMode] = useState('creation'); // Режимы: оценивание / создание.
 
-    // Состояния для создания станции
+    // Состояния для создания станции.
+    // Хук состояния для имени станции.
     const [stationName, setStationName] = useState('');
+    // Хук состояния для изображения станции.
     const [stationImage, setStationImage] = useState(null);
+    // Хук состояния для описания станции.
     const [stationDescription, setStationDescription] = useState('');
+    // Хук состояния для этапа станции.
     const [stationStage, setStationStage] = useState('');
 
     useEffect(() => {
-        // Получение текущей станции и участников
+        // Получение текущей станции и участников при монтировании компонента.
         axios.get('http://localhost:5000/api/current-station')
             .then((response) => setCurrentStation(response.data))
             .catch((error) => setError('Error fetching current station'));
-
+        
         axios.get('http://localhost:5000/api/participants')
             .then((response) => setParticipants(response.data))
             .catch((error) => setError('Error fetching participants'))
             .finally(() => setLoading(false));
 
-        // Подключение к WebSocket
+        // Подключение к WebSocket для получения обновлений.
         const socket = new WebSocket('ws://localhost:5000');
+
         socket.onmessage = (event) => {
+            // Обработка сообщений от сервера.
             const data = JSON.parse(event.data);
             if (data.type === 'station_changed') {
+                // Обновляем текущую станцию.
                 setCurrentStation(data.data);
             } else if (data.type === 'gamemode_changed') {
+                // Обновляем режим в зависимости от данных.
                 setMode(data.data);
             }
         };
 
-        // Очистка при размонтировании
+        // Очистка при размонтировании компонента.
         return () => socket.close();
     }, []);
 
+    // Обработчик для отправки оценки станции.
     const handleRating = () => {
         if (currentStation && selectedParticipant && rating >= 1 && rating <= 5) {
             axios.post('http://localhost:5000/api/rating', {
@@ -52,13 +68,15 @@ function ParticipantPage() {
                 .then(() => console.log('Rating submitted'))
                 .catch((error) => console.error('Error submitting rating', error));
         } else {
+            // Установка ошибки, если данные недействительны.
             setError('Invalid data for rating submission');
         }
     };
 
-    // Функция отправки новой станции
+    // Функция отправки новой станции.
     const handleStationCreation = (e) => {
         e.preventDefault();
+        // Проверка, что все поля заполнены.
         if (stationName && stationDescription && stationStage) {
             const formData = new FormData();
             formData.append('name', stationName);
@@ -71,6 +89,7 @@ function ParticipantPage() {
             })
                 .then(() => {
                     alert('Станция успешно создана!');
+                    // Сброс значений полей после успешного создания станции.
                     setStationName('');
                     setStationImage(null);
                     setStationDescription('');
@@ -78,25 +97,27 @@ function ParticipantPage() {
                 })
                 .catch((error) => {
                     console.error('Error creating station', error);
+                    // Установка ошибки при создании станции.
                     setError('Ошибка при создании станции');
                 });
         } else {
+            // Установка ошибки, если не все поля заполнены.
             setError('Заполните все поля!');
         }
     };
 
-    // Обработчик для изменения оценки
+    // Обработчик для изменения оценки.
     const handleRatingChange = (e) => {
         const value = e.target.value;
-        // Проверка на допустимые значения (только от 1 до 5)
-        if (/^[1-5]$/.test(value)) {
+        // Проверка на допустимые значения (1-5).
+        if (/^[1-5]$/.test(value) || value === "") {
             setRating(value);
-            setError(null); // Сброс ошибки, если данные корректные
-        } else {
-            setError('Оценка должна быть от 1 до 5');
+            // Сброс ошибки, если данные корректные.
+            setError(null);
         }
     };
 
+    // Рендеринг режима создания станции.
     const renderCreationMode = () => (
         <div className="block">
             <h2>Создание станции</h2>
@@ -142,6 +163,7 @@ function ParticipantPage() {
         </div>
     );
 
+    // Рендеринг режима оценивания станции.
     const renderEvaluationMode = () => (
         <div className="block">
             <h2>Оценивание станции</h2>
@@ -172,11 +194,11 @@ function ParticipantPage() {
                             min="1"
                             max="5"
                             value={rating}
-                            onChange={handleRatingChange} // Изменяем функцию на проверку
+                            onChange={handleRatingChange} // Изменяем функцию на проверку.
                         />
                     </div>
 
-                    <button onClick={handleRating} className="submit-btn" disabled={rating === ''}>
+                    <button onClick={handleRating} className="submit-btn">
                         Отправить оценку
                     </button>
                 </div>
@@ -186,6 +208,7 @@ function ParticipantPage() {
         </div>
     );
 
+    // Главный рендер, выбирает режим в зависимости от состояния.
     return (
         <div className="container">
             {mode === 'evaluation' ? renderEvaluationMode() : renderCreationMode()}
