@@ -3,7 +3,7 @@ import axios from 'axios';
 import './App.css';
 // Импорт SVG.
 import logo from './assets/svg/logo.svg';
-// Импор BrowserRouter, Routes и Route.
+// Импорт BrowserRouter, Routes и Route.
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 // Подключение страниц администратора и участника.
 import AdminPage from './components/AdminPage';
