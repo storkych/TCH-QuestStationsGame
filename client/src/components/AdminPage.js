@@ -2,71 +2,97 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 function AdminPage() {
-    // Хук состояния для хранения текущей станции.
     const [currentStation, setCurrentStation] = useState(null);
-    // Хук состояния для хранения среднего рейтинга текущей станции.
     const [avgRating, setAvgRating] = useState(0);
-    // Хук состояния для режима работы (оценивание или создание).
-    const [mode, setMode] = useState('creation'); // Режимы: оценивание / создание.
+    const [mode, setMode] = useState('creation');
+    const [settings, setSettings] = useState({ round_number: 0, mode: 'creation' });
 
-    // Получить текущую станцию (один раз при монтировании компонента).
+    // Получить текущую станцию при монтировании компонента
     useEffect(() => {
         axios.get('http://localhost:5000/api/current-station')
             .then((response) => {
-                setCurrentStation(response.data); // Устанавливаем текущую станцию.
+                setCurrentStation(response.data);
             })
             .catch((error) => {
-                console.error('There was an error fetching the current station!', error); // Логирование ошибки.
+                console.error('There was an error fetching the current station!', error);
             });
-    }, []); // Зависимости пустые, чтобы запрос выполнялся только один раз.
+    }, []);
 
-    // Получить средний рейтинг для текущей станции.
+    // Получить средний рейтинг для текущей станции
     const fetchAverageRating = () => {
-        if (currentStation && currentStation.id) { // Проверка, что текущая станция существует.
+        if (currentStation && currentStation.id) {
             axios.get(`http://localhost:5000/api/rating/${currentStation.id}`)
                 .then((response) => {
-                    setAvgRating(response.data.avg_rating); // Устанавливаем средний рейтинг.
+                    setAvgRating(response.data.avg_rating);
                 })
                 .catch((error) => {
-                    console.error('Error fetching average rating', error); // Логирование ошибки.
+                    console.error('Error fetching average rating', error);
                 });
         }
     };
 
     useEffect(() => {
-        // Устанавливаем интервал для обновления среднего рейтинга.
-        const ratingInterval = setInterval(fetchAverageRating, 5000); // Обновляем рейтинг каждые 5 секунд.
+        const ratingInterval = setInterval(fetchAverageRating, 5000);
 
-        // Очищаем интервал при размонтировании компонента.
         return () => {
-            clearInterval(ratingInterval); // Остановка интервала.
+            clearInterval(ratingInterval);
         };
-    }, [currentStation]); // Этот useEffect сработает, когда currentStation обновится.
+    }, [currentStation]);
 
-    // Перейти к следующей станции.
+    // Перейти к следующей станции
     const handleNextStation = () => {
         if (currentStation) {
-            axios.get(`http://localhost:5000/api/next-station`)
+            axios.get('http://localhost:5000/api/next-station')
                 .then((response) => {
-                    setCurrentStation(response.data); // Обновляем текущую станцию.
-                    fetchAverageRating(); // Немедленно обновляем рейтинг при переключении станции.
+                    setCurrentStation(response.data);
+                    fetchAverageRating();
                 })
                 .catch((error) => {
-                    console.error('Error next station', error); // Логирование ошибки.
+                    console.error('Error next station', error);
                 });
         }
     };
 
-    // Обработчик смены режима игры.
+    // Загрузка настроек из базы данных
+    useEffect(() => {
+        fetch('http://localhost:5000/api/settings')
+            .then(response => response.json())
+            .then(data => setSettings(data));
+    }, []);
+
+    // Обработчик изменения номера раунда
+    const handleRoundChange = async (e) => {
+        const newRound = e.target.value;
+        await fetch('http://localhost:5000/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ round_number: newRound, mode: settings.mode })
+        });
+        setSettings(prevState => ({ ...prevState, round_number: newRound }));
+
+        // После изменения раунда, получить новую станцию
+        axios.get(`http://localhost:5000/api/current-station?round_number=${newRound}`)
+            .then((response) => {
+                setCurrentStation(response.data);
+                fetchAverageRating(); // Обновляем рейтинг для новой станции
+            })
+            .catch((error) => {
+                console.error('Error fetching station for new round:', error);
+            });
+    };
+
+    // Обработчик смены режима игры
     const handleGameMode = (newMode) => {
-        setMode(newMode); // Устанавливаем новый режим.
+        setMode(newMode);
 
         axios.post('http://localhost:5000/api/game-mode', { game_mode: newMode })
             .then((response) => {
-                console.log('Game mode updated:', response.data); // Логирование успешного обновления режима.
+                console.log('Game mode updated:', response.data);
             })
             .catch((error) => {
-                console.error('Error changing game mode:', error); // Логирование ошибки.
+                console.error('Error changing game mode:', error);
             });
     };
 
@@ -81,15 +107,20 @@ function AdminPage() {
                     Создание станции
                 </button>
             </div>
-
+            <label>
+                Выберите раунд:
+                <select value={settings.round_number} onChange={handleRoundChange}>
+                    <option value={0}>Раунд 0</option>
+                    <option value={1}>Раунд 1</option>
+                    <option value={2}>Раунд 2</option>
+                </select>
+            </label>
             {currentStation ? (
                 <div className="block">
                     <img src={`http://localhost:5000/${currentStation.image}`} className="station-image" alt={currentStation.name}></img>
                     <h3>{currentStation.name}</h3>
                     <p>{currentStation.description}</p>
                     <h4>Средний рейтинг: {avgRating}</h4>
-
-                    {/* Кнопка "Следующая станция" */}
                     <button onClick={handleNextStation} className="submit-btn">Следующая станция</button>
                 </div>
             ) : (

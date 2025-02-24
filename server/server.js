@@ -57,25 +57,45 @@ function broadcast(type, data) {
 // Метод GET для переключения на следующую станцию.
 app.get('/api/next-station', async (req, res) => {
     try {
-        currentStationId++;
-        const result = await pool.query('SELECT * FROM stations WHERE id = $1', [currentStationId]);
+        // Получаем текущий номер раунда
+        const settingsResult = await pool.query('SELECT * FROM settings ORDER BY id DESC LIMIT 1');
+        const currentRound = settingsResult.rows[0]?.round_number;
 
-        if (result.rows.length === 0) {
-            // Если станция не найдена, возврат к первой.
-            currentStationId = 1;
-            const firstStation = await pool.query('SELECT * FROM stations WHERE id = $1', [currentStationId]);
-            broadcast('station_changed', firstStation.rows[0]);
-            res.json(firstStation.rows[0]);
-        } else {
-            // Отправка обновления всем клиентам.
-            broadcast('station_changed', result.rows[0]);
-            res.json(result.rows[0]);
+        if (currentRound === undefined) {
+            return res.status(400).send('Round number not set.');
         }
+
+        // Получаем все станции текущего раунда
+        const stationsResult = await pool.query('SELECT * FROM stations WHERE round_number = $1 ORDER BY id', [currentRound]);
+
+        if (stationsResult.rows.length === 0) {
+            return res.status(404).send('No stations found for the current round');
+        }
+
+        // Ищем индекс текущей станции в списке
+        let currentStationIndex = stationsResult.rows.findIndex(station => station.id === currentStationId);
+
+        if (currentStationIndex === -1 || currentStationIndex === stationsResult.rows.length - 1) {
+            // Если текущая станция не найдена или она последняя, начинаем с первой.
+            currentStationId = stationsResult.rows[0].id;
+        } else {
+            // Переходим к следующей станции в списке
+            currentStationId = stationsResult.rows[currentStationIndex + 1].id;
+        }
+
+        // Получаем следующую станцию
+        const nextStation = stationsResult.rows.find(station => station.id === currentStationId);
+
+        // Отправляем обновление всем клиентам.
+        broadcast('station_changed', nextStation);
+        res.json(nextStation);
+
     } catch (error) {
         console.error(error);
         res.status(500).send('Error switching to next station');
     }
 });
+
 
 // Метод POST для установления режима.
 app.post('/api/game-mode', async (req, res) => {
@@ -151,7 +171,65 @@ app.post('/api/stations', upload.single('image'), async (req, res) => {
 });
 
 
-// Метод GET для получения списка всех станций.
+app.get('/api/settings', async (req, res) => {
+    try {
+        const settings = await pool.query('SELECT * FROM settings ORDER BY id DESC LIMIT 1');
+        res.json(settings.rows[0]);
+    } catch (error) {
+        console.error('Error retrieving settings:', error);
+        res.status(500).send('Error retrieving settings');
+    }
+});
+
+
+app.post('/api/settings', async (req, res) => {
+    const { round_number, mode } = req.body;
+
+    try {
+        // Обновляем текущие настройки в таблице (используем максимальный id)
+        await pool.query(
+            'UPDATE settings SET round_number = $1, mode = $2 WHERE id = (SELECT MAX(id) FROM settings)',
+            [round_number, mode]
+        );
+        res.status(200).send('Settings updated successfully');
+    } catch (error) {
+        console.error('Error updating settings:', error);
+        res.status(500).send('Error updating settings');
+    }
+});
+
+
+// Метод GET для получения текущей станции для текущего раунда.
+app.get('/api/current-station', async (req, res) => {
+    try {
+        // Получаем настройки с последним номером раунда
+        const settingsResult = await pool.query('SELECT * FROM settings ORDER BY id DESC LIMIT 1');
+        const currentRound = settingsResult.rows[0]?.round_number;
+
+        if (currentRound === undefined) {
+            return res.status(400).send('Round number not set.');
+        }
+
+        // Запрос к базе для получения станций, которые принадлежат текущему раунду
+        const result = await pool.query('SELECT * FROM stations WHERE round_number = $1', [currentRound]);
+
+        if (result.rows.length > 0) {
+            // Отправляем первую станцию из текущего раунда.
+            res.json(result.rows[0]);
+        } else {
+            // Если нет станций для текущего раунда.
+            res.status(404).send('No stations found for the current round');
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving current station');
+    }
+});
+
+
+
+
+// Метод GET для получения текущей станции.
 app.get('/api/stations', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM stations');
@@ -162,18 +240,27 @@ app.get('/api/stations', async (req, res) => {
     }
 });
 
-// Метод GET для получения текущей станции.
-app.get('/api/current-station', async (req, res) => {
+app.get('/api/round_stations', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM stations WHERE id = $1', [currentStationId]);
+        // Получаем настройки с последним номером раунда
+        const settingsResult = await pool.query('SELECT * FROM settings ORDER BY id DESC LIMIT 1');
+        const currentRound = settingsResult.rows[0]?.round_number;
+
+        if (currentRound === undefined) {
+            return res.status(400).send('Round number not set.');
+        }
+
+        // Запрос к базе для получения станций, которые принадлежат текущему раунду
+        const result = await pool.query('SELECT * FROM stations WHERE round_number = $1', [currentRound]);
+
         if (result.rows.length > 0) {
-            res.json(result.rows[0]);
+            res.json(result.rows);  // Отправляем только станции текущего раунда
         } else {
-            res.status(404).send('No stations found');
+            res.status(404).send('No stations found for the current round');
         }
     } catch (error) {
         console.error(error);
-        res.status(500).send('Error retrieving current station');
+        res.status(500).send('Error retrieving stations');
     }
 });
 
