@@ -31,13 +31,15 @@ const clients = new Set();
 
 // Подключение нового клиента.
 wss.on('connection', (ws) => {
+    console.log('Client connected');
     clients.add(ws);
 
-    // Удаление клиента при отключении.
     ws.on('close', () => {
+        console.log('Client disconnected');
         clients.delete(ws);
     });
 });
+
 
 // Широковещательная отправка данных всем клиентам.
 // Функция для трансляции сообщения всем клиентам.
@@ -46,7 +48,7 @@ function broadcast(type, data) {
         type: type,
         data: data
     });
-
+    console.log(data)
     // Отправка сообщения всем подключенным клиентам.
     clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
@@ -100,15 +102,24 @@ app.get('/api/next-station', async (req, res) => {
 // Метод POST для установления режима.
 app.post('/api/game-mode', async (req, res) => {
     const { game_mode } = req.body;
+    console.log("GAMEMODE")
     try {
+        // Обновляем текущие настройки в таблице settings
+        await pool.query(
+            'UPDATE settings SET mode = $1 WHERE id = (SELECT MAX(id) FROM settings)',
+            [game_mode]
+        );
+
         // Отправляем широковещательное сообщение WebSocket.
         broadcast('gamemode_changed', game_mode);
-        res.status(200).send('Game mode changed');
+
+        res.status(200).send('Game mode updated successfully');
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Error switching game mode');
+        console.error('Error updating game mode:', error);
+        res.status(500).send('Error updating game mode');
     }
 });
+
 
 
 // Настройка хранилища для загруженных файлов.
@@ -141,34 +152,60 @@ app.post('/api/stations', upload.single('image'), async (req, res) => {
     const { name, description, stage } = req.body;
     const imagePath = req.file ? req.file.path : null;
 
-    // Создание нового объекта станции.
-    const newStation = { name, description, stage, image: imagePath };
-
-    // Сохранение в таблицу stations.
-    const query = `
-        INSERT INTO stations (name, description, stage, image)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, name, description, stage, image;
-    `;
-    const values = [newStation.name, newStation.description, newStation.stage, newStation.image];
+    // Получить текущий номер раунда из настроек (например, из базы данных)
+    const roundQuery = 'SELECT round_number FROM settings LIMIT 1'; // Запрос для получения текущего номера раунда
+    let roundNumber;
 
     try {
-        // Выполнение запроса к базе данных.
+        const roundResult = await pool.query(roundQuery);
+        if (roundResult.rows.length > 0) {
+            roundNumber = roundResult.rows[0].round_number; // Сохраняем текущий номер раунда
+        } else {
+            return res.status(400).send({ message: 'Номер раунда не найден в настройках.' });
+        }
+    } catch (error) {
+        console.error('Ошибка при получении настроек:', error);
+        return res.status(500).send({
+            message: 'Ошибка при получении номера раунда',
+            error: error.message,
+        });
+    }
+
+    // Создание нового объекта станции с добавлением номера раунда
+    const newStation = {
+        name,
+        description,
+        stage,
+        image: imagePath,
+        round_number: roundNumber // Добавляем номер раунда
+    };
+
+    // Сохранение станции в таблицу stations
+    const query = `
+        INSERT INTO stations (name, description, stage, image, round_number)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, name, description, stage, image, round_number;
+    `;
+    const values = [newStation.name, newStation.description, newStation.stage, newStation.image, newStation.round_number];
+
+    try {
+        // Выполнение запроса к базе данных
         const result = await pool.query(query, values);
 
-        // Возвращение успешного ответа с данными о новой станции.
+        // Возвращение успешного ответа с данными о новой станции
         res.status(201).send({
             message: 'Станция создана',
             station: result.rows[0],
         });
     } catch (error) {
-        console.error('Error saving station to database:', error);
+        console.error('Ошибка при сохранении станции в базе данных:', error);
         res.status(500).send({
             message: 'Ошибка при создании станции',
             error: error.message,
         });
     }
 });
+
 
 
 app.get('/api/settings', async (req, res) => {
@@ -191,6 +228,7 @@ app.post('/api/settings', async (req, res) => {
             'UPDATE settings SET round_number = $1, mode = $2 WHERE id = (SELECT MAX(id) FROM settings)',
             [round_number, mode]
         );
+        broadcast('gamemode_changed', mode);
         res.status(200).send('Settings updated successfully');
     } catch (error) {
         console.error('Error updating settings:', error);
@@ -200,6 +238,7 @@ app.post('/api/settings', async (req, res) => {
 
 
 // Метод GET для получения текущей станции для текущего раунда.
+// Метод GET для получения текущей станции.
 app.get('/api/current-station', async (req, res) => {
     try {
         // Получаем настройки с последним номером раунда
@@ -217,8 +256,9 @@ app.get('/api/current-station', async (req, res) => {
             // Отправляем первую станцию из текущего раунда.
             res.json(result.rows[0]);
         } else {
-            // Если нет станций для текущего раунда.
-            res.status(404).send('No stations found for the current round');
+            // Заглушка для отсутствующих станций
+            const noStations = { message: 'Станции отсутствуют' };
+            res.json(noStations);  // Возвращаем объект с заглушкой
         }
     } catch (error) {
         console.error(error);
@@ -264,6 +304,21 @@ app.get('/api/round_stations', async (req, res) => {
     }
 });
 
+app.get('/api/stations/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query('SELECT * FROM stations WHERE id = $1', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).send('Station not found');
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving station details');
+    }
+});
 
 
 // Метод POST для оценки станции и обновления среднего рейтинга.
@@ -335,3 +390,4 @@ server.on('upgrade', (request, socket, head) => {
         wss.emit('connection', ws, request);
     });
 });
+

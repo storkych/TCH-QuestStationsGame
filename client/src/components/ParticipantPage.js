@@ -38,10 +38,20 @@ function ParticipantPage() {
             .catch((error) => setError('Error fetching participants'))
             .finally(() => setLoading(false));
 
+        // Получение gamemode из /api/settings
+        axios.get('http://localhost:5000/api/settings')
+            .then((response) => {
+                if (response.data && response.data.mode) {
+                    setMode(response.data.mode);
+                }
+            })
+            .catch(() => setError('Ошибка при загрузке настроек'));
+
         // Подключение к WebSocket для получения обновлений.
         const socket = new WebSocket('ws://localhost:5000');
 
         socket.onmessage = (event) => {
+            console.log('Received message:', event.data);
             // Обработка сообщений от сервера.
             const data = JSON.parse(event.data);
             if (data.type === 'station_changed') {
@@ -52,7 +62,17 @@ function ParticipantPage() {
                 setMode(data.data);
             }
         };
+        socket.onopen = () => {
+            console.log('WebSocket connection opened');
+        };
 
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        socket.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
         // Очистка при размонтировании компонента.
         return () => socket.close();
     }, []);
@@ -177,7 +197,7 @@ function ParticipantPage() {
 
                     <div className="form-group">
                         <label>Выберите участника:</label>
-                        <select onChange={(e) => setSelectedParticipant(e.target.value)} value={selectedParticipant}>
+                        <select onChange={(e) => setSelectedParticipant(e.target.value)} value={selectedParticipant || ""}>
                             <option value="">Выберите своё имя</option>
                             {participants.map((participant) => (
                                 <option key={participant.id} value={participant.id}>
@@ -185,6 +205,7 @@ function ParticipantPage() {
                                 </option>
                             ))}
                         </select>
+
                     </div>
 
                     <div className="form-group">

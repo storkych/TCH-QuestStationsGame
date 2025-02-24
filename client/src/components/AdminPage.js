@@ -4,7 +4,6 @@ import axios from 'axios';
 function AdminPage() {
     const [currentStation, setCurrentStation] = useState(null);
     const [avgRating, setAvgRating] = useState(0);
-    const [mode, setMode] = useState('creation');
     const [settings, setSettings] = useState({ round_number: 0, mode: 'creation' });
 
     // Получить текущую станцию при монтировании компонента
@@ -14,7 +13,7 @@ function AdminPage() {
                 setCurrentStation(response.data);
             })
             .catch((error) => {
-                console.error('There was an error fetching the current station!', error);
+                console.error('Ошибка при загрузке текущей станции', error);
             });
     }, []);
 
@@ -26,73 +25,72 @@ function AdminPage() {
                     setAvgRating(response.data.avg_rating);
                 })
                 .catch((error) => {
-                    console.error('Error fetching average rating', error);
+                    console.error('Ошибка при загрузке среднего рейтинга', error);
                 });
         }
     };
 
     useEffect(() => {
         const ratingInterval = setInterval(fetchAverageRating, 5000);
-
-        return () => {
-            clearInterval(ratingInterval);
-        };
+        return () => clearInterval(ratingInterval);
     }, [currentStation]);
 
     // Перейти к следующей станции
     const handleNextStation = () => {
-        if (currentStation) {
-            axios.get('http://localhost:5000/api/next-station')
-                .then((response) => {
-                    setCurrentStation(response.data);
-                    fetchAverageRating();
-                })
-                .catch((error) => {
-                    console.error('Error next station', error);
-                });
-        }
+        axios.get('http://localhost:5000/api/next-station')
+            .then((response) => {
+                setCurrentStation(response.data);
+                fetchAverageRating();
+            })
+            .catch((error) => {
+                console.error('Ошибка при переходе к следующей станции', error);
+            });
     };
 
     // Загрузка настроек из базы данных
     useEffect(() => {
-        fetch('http://localhost:5000/api/settings')
-            .then(response => response.json())
-            .then(data => setSettings(data));
+        axios.get('http://localhost:5000/api/settings')
+            .then(response => {
+                setSettings(response.data);
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке настроек', error);
+            });
     }, []);
 
     // Обработчик изменения номера раунда
     const handleRoundChange = async (e) => {
         const newRound = e.target.value;
-        await fetch('http://localhost:5000/api/settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ round_number: newRound, mode: settings.mode })
-        });
-        setSettings(prevState => ({ ...prevState, round_number: newRound }));
+        const updatedSettings = { ...settings, round_number: newRound };
+
+        await axios.post('http://localhost:5000/api/settings', updatedSettings)
+            .catch(error => {
+                console.error('Ошибка при обновлении номера раунда', error);
+            });
+
+        setSettings(updatedSettings);
 
         // После изменения раунда, получить новую станцию
         axios.get(`http://localhost:5000/api/current-station?round_number=${newRound}`)
             .then((response) => {
                 setCurrentStation(response.data);
-                fetchAverageRating(); // Обновляем рейтинг для новой станции
+                fetchAverageRating();
             })
             .catch((error) => {
-                console.error('Error fetching station for new round:', error);
+                console.error('Ошибка при загрузке станции для нового раунда', error);
             });
     };
 
     // Обработчик смены режима игры
     const handleGameMode = (newMode) => {
-        setMode(newMode);
+        const updatedSettings = { ...settings, mode: newMode };
 
-        axios.post('http://localhost:5000/api/game-mode', { game_mode: newMode })
-            .then((response) => {
-                console.log('Game mode updated:', response.data);
+        axios.post('http://localhost:5000/api/settings', updatedSettings)
+            .then(() => {
+                setSettings(updatedSettings);
             })
             .catch((error) => {
-                console.error('Error changing game mode:', error);
+                console.error('Ошибка при смене режима игры', error);
             });
     };
 
@@ -100,21 +98,23 @@ function AdminPage() {
         <div className="container">
             <h2>Админ панель</h2>
             <div className="mode-switcher">
-                <button className={mode === 'evaluation' ? 'active' : ''} onClick={() => handleGameMode('evaluation')}>
+                <button className={settings.mode === 'evaluation' ? 'active' : ''} onClick={() => handleGameMode('evaluation')}>
                     Оценивание
                 </button>
-                <button className={mode === 'creation' ? 'active' : ''} onClick={() => handleGameMode('creation')}>
+                <div className="round-input">
+                    <input
+                        type="number"
+                        value={settings.round_number}
+                        onChange={handleRoundChange}
+                        min="0"
+                        style={{ textAlign: 'center' }}
+                    />
+                </div>
+                <button className={settings.mode === 'creation' ? 'active' : ''} onClick={() => handleGameMode('creation')}>
                     Создание станции
                 </button>
             </div>
-            <label>
-                Выберите раунд:
-                <select value={settings.round_number} onChange={handleRoundChange}>
-                    <option value={0}>Раунд 0</option>
-                    <option value={1}>Раунд 1</option>
-                    <option value={2}>Раунд 2</option>
-                </select>
-            </label>
+
             {currentStation ? (
                 <div className="block">
                     <img src={`http://localhost:5000/${currentStation.image}`} className="station-image" alt={currentStation.name}></img>

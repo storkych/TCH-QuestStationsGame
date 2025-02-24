@@ -8,6 +8,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 // Подключение страниц администратора и участника.
 import AdminPage from './components/AdminPage';
 import ParticipantPage from './components/ParticipantPage';
+import StationDetail from './components/StationDetail';
 
 // Компонент для отображения таблицы станций с многоуровневой сортировкой.
 function StationsTable({ stations }) {
@@ -83,17 +84,21 @@ function StationsTable({ stations }) {
                     <th onClick={() => toggleSort('rating')}>
                         Оценка {getSortDirection(sortConfig, 'rating')}
                     </th>
+                    <th onClick={() => toggleSort('round_number')}>
+                        Раунд {getSortDirection(sortConfig, 'round_number')}
+                    </th>
                 </tr>
                 </thead>
                 <tbody>
                 {sortedStations.length > 0 ? (
                     sortedStations.map((station) => (
-                        <tr key={station.id}>
+                        <tr key={station.id} onClick={() => window.location.href = `/station/${station.id}`}>
                             <td>{station.id}</td>
                             <td>{station.name}</td>
                             <td>{station.description}</td>
                             <td>{station.stage}</td>
                             <td>{renderStars(station.rating)} ({station.rating || 0})</td>
+                            <td>{station.round_number}</td>
                         </tr>
                     ))
                 ) : (
@@ -138,6 +143,7 @@ function App() {
                     <Route path="/" element={<StationsTable stations={stations} />} /> {/* Главная страница с таблицей станций */}
                     <Route path="/admin" element={<AdminPage stations={stations} />} /> {/* Страница для админа */}
                     <Route path="/participant" element={<ParticipantPage stations={stations} />} /> {/* Страница для участника */}
+                    <Route path="/station/:stationId" element={<StationDetail />} /> {/* Маршрут для подробностей */}
                 </Routes>
             </div>
         </Router>

@@ -1,3 +1,4 @@
+// Обновленный компонент StationsTable с колонкой для номера раунда.
 function StationsTable({ stations }) {
     const renderStars = (rating) => {
         const stars = Math.round(rating); // Округляем до ближайшего целого
@@ -6,15 +7,16 @@ function StationsTable({ stations }) {
 
     return (
         <div className="stations-table-container">
-            <h2>All Stations</h2>
+            <h2>Список всех станций</h2>
             <table className="stations-table">
                 <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Stage</th>
-                    <th>Rating</th>
+                    <th>Название</th>
+                    <th>Описание</th>
+                    <th>Этап</th>
+                    <th>Рейтинг</th>
+                    <th>Раунд</th> {/* Новая колонка для номера раунда */}
                 </tr>
                 </thead>
                 <tbody>
@@ -26,11 +28,12 @@ function StationsTable({ stations }) {
                             <td>{station.description}</td>
                             <td>{station.stage}</td>
                             <td>{renderStars(station.rating)} ({station.rating || 0})</td>
+                            <td>{station.round_number}</td> {/* Отображаем номер раунда */}
                         </tr>
                     ))
                 ) : (
                     <tr>
-                        <td colSpan="5">No stations available.</td>
+                        <td colSpan="6">Станции не найдены.</td>
                     </tr>
                 )}
                 </tbody>
