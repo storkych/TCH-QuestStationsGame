@@ -13,11 +13,11 @@ app.use(bodyParser.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const pool = new Pool({
-    user: 'postgres',
+    user: 'storkych',
     host: 'localhost',
     database: 'quest_stations',
-    password: '1317',
-    port: 5432,
+    password: '13i15S03d',
+    port: 3306,
 });
 
 // Переменная для хранения ID текущей станции.
