@@ -124,7 +124,7 @@ function App() {
 
     useEffect(() => {
         // Загрузка списка станций с сервера.
-        axios.get('https://tch-shv.ru/api/stations')
+        axios.get('http://localhost:5000/api/stations')
             .then((response) => {
                 setStations(response.data);
             })

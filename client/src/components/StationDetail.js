@@ -17,7 +17,7 @@ function StationDetail() {
         if (!stationId) return; // Если нет stationId, ничего не делать
 
         // Загрузка данных о выбранной станции
-        axios.get(`https://tch-shv.ru/api/stations/${stationId}`)
+        axios.get(`http://localhost:5000/api/stations/${stationId}`)
             .then((response) => {
                 console.log('Station data:', response.data); // Для отладки
                 setStation(response.data);
@@ -32,7 +32,7 @@ function StationDetail() {
     return (
         <div className="container">
             <h2>{station.name}</h2>
-            <img src={`https://tch-shv.ru/${station.image}`} alt={station.name} className="station-image"/>
+            <img src={`http://localhost:5000/${station.image}`} alt={station.name} className="station-image"/>
             <p className="station-description">{station.description}</p>
             <div className="station-info">
                 <p><strong>Этап:</strong> {station.stage}</p>

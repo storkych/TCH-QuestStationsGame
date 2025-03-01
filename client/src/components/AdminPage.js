@@ -8,7 +8,7 @@ function AdminPage() {
 
     // Получить текущую станцию при монтировании компонента
     useEffect(() => {
-        axios.get('https://tch-shv.ru/api/current-station')
+        axios.get('http://localhost:5000/api/current-station')
             .then((response) => {
                 setCurrentStation(response.data);
             })
@@ -20,7 +20,7 @@ function AdminPage() {
     // Получить средний рейтинг для текущей станции
     const fetchAverageRating = () => {
         if (currentStation && currentStation.id) {
-            axios.get(`https://tch-shv.ru/api/rating/${currentStation.id}`)
+            axios.get(`http://localhost:5000/api/rating/${currentStation.id}`)
                 .then((response) => {
                     setAvgRating(response.data.avg_rating);
                 })
@@ -37,7 +37,7 @@ function AdminPage() {
 
     // Перейти к следующей станции
     const handleNextStation = () => {
-        axios.get('https://tch-shv.ru/api/next-station')
+        axios.get('http://localhost:5000/api/next-station')
             .then((response) => {
                 setCurrentStation(response.data);
                 fetchAverageRating();
@@ -49,7 +49,7 @@ function AdminPage() {
 
     // Загрузка настроек из базы данных
     useEffect(() => {
-        axios.get('https://tch-shv.ru/api/settings')
+        axios.get('http://localhost:5000/api/settings')
             .then(response => {
                 setSettings(response.data);
             })
@@ -63,7 +63,7 @@ function AdminPage() {
         const newRound = e.target.value;
         const updatedSettings = { ...settings, round_number: newRound };
 
-        await axios.post('https://tch-shv.ru/api/settings', updatedSettings)
+        await axios.post('http://localhost:5000/api/settings', updatedSettings)
             .catch(error => {
                 console.error('Ошибка при обновлении номера раунда', error);
             });
@@ -71,7 +71,7 @@ function AdminPage() {
         setSettings(updatedSettings);
 
         // После изменения раунда, получить новую станцию
-        axios.get(`https://tch-shv.ru/api/current-station?round_number=${newRound}`)
+        axios.get(`http://localhost:5000/api/current-station?round_number=${newRound}`)
             .then((response) => {
                 setCurrentStation(response.data);
                 fetchAverageRating();
@@ -85,7 +85,7 @@ function AdminPage() {
     const handleGameMode = (newMode) => {
         const updatedSettings = { ...settings, mode: newMode };
 
-        axios.post('https://tch-shv.ru/api/settings', updatedSettings)
+        axios.post('http://localhost:5000/api/settings', updatedSettings)
             .then(() => {
                 setSettings(updatedSettings);
             })
@@ -117,7 +117,7 @@ function AdminPage() {
 
             {currentStation ? (
                 <div className="block">
-                    <img src={`https://tch-shv.ru/${currentStation.image}`} className="station-image" alt={currentStation.name}></img>
+                    <img src={`http://localhost:5000/${currentStation.image}`} className="station-image" alt={currentStation.name}></img>
                     <h3>{currentStation.name}</h3>
                     <p>{currentStation.description}</p>
                     <h4>Средний рейтинг: {avgRating}</h4>

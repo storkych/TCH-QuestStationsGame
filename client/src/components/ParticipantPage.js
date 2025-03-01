@@ -29,17 +29,17 @@ function ParticipantPage() {
 
     useEffect(() => {
         // Получение текущей станции и участников при монтировании компонента.
-        axios.get('https://tch-shv.ru/api/current-station')
+        axios.get('http://localhost:5000/api/current-station')
             .then((response) => setCurrentStation(response.data))
             .catch((error) => setError('Error fetching current station'));
         
-        axios.get('https://tch-shv.ru/api/participants')
+        axios.get('http://localhost:5000/api/participants')
             .then((response) => setParticipants(response.data))
             .catch((error) => setError('Error fetching participants'))
             .finally(() => setLoading(false));
 
         // Получение gamemode из /api/settings
-        axios.get('https://tch-shv.ru/api/settings')
+        axios.get('http://localhost:5000/api/settings')
             .then((response) => {
                 if (response.data && response.data.mode) {
                     setMode(response.data.mode);
@@ -80,7 +80,7 @@ function ParticipantPage() {
     // Обработчик для отправки оценки станции.
     const handleRating = () => {
         if (currentStation && selectedParticipant && rating >= 1 && rating <= 5) {
-            axios.post('https://tch-shv.ru/api/rating', {
+            axios.post('http://localhost:5000/api/rating', {
                 participant_id: selectedParticipant,
                 station_id: currentStation.id,
                 rating: rating,
@@ -104,7 +104,7 @@ function ParticipantPage() {
             formData.append('description', stationDescription);
             formData.append('stage', stationStage);
 
-            axios.post('https://tch-shv.ru/api/stations', formData, {
+            axios.post('http://localhost:5000/api/stations', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             })
                 .then(() => {
@@ -191,7 +191,7 @@ function ParticipantPage() {
             {error && <p className="error">{error}</p>}
             {currentStation ? (
                 <div>
-                    <img src={`https://tch-shv.ru/${currentStation.image}`} className="station-image" alt="Станция" />
+                    <img src={`http://localhost:5000/${currentStation.image}`} className="station-image" alt="Станция" />
                     <h3>{currentStation.name}</h3>
                     <p>{currentStation.description}</p>
 
